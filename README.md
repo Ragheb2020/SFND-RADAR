@@ -14,9 +14,11 @@
 and that’s all for the Implementation.
 
 ## Selection of Training, Guard cells and offset
+These were primarily chosen because of the walkthrough video, but also because of repeated experimentation to see how the performance varies when we slowly diverge away from the initial hyperparameters chosen. The initial hyperparameters chosen were already good enough, so they remain in the final version of this project.
 * `Tr = 10, Td = 8` For both Range and Doppler Training Cells.
 * `Gr = 4, Gd = 4` For both Range and Doppler Guard Cells.
-* `offset = 1.4` the offset value.
+* `offset = 1.5` the offset value.
+
 
 ## Steps taken to suppress the non-thresholded cells at the edges
 This was done throught sclicing the output such that we have the surrounding rows and columns depending on the Training cells for both range and doppler.<br>
