@@ -164,9 +164,11 @@ Gd = 4;
 
 % *%TODO* :
 % offset the threshold by SNR value in dB
-offset = 1.4;
+offset = 1.5;
 
-
+% *%TODO* :
+%Create a vector to store noise_level for each iteration on training cells
+noise_level = zeros(1,1);
 
 % *%TODO* :
 %design a loop such that it slides the CUT across range doppler map by
@@ -183,47 +185,54 @@ offset = 1.4;
 % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing CFAR
 
 
-for i = Tr+Gr+1 : (Nr/2)-(Gr+Tr)
-    for j = Td+Gd+1 : Nd-(Gd+Td)
-        
-        % init noise level
-        noise_level = zeros(1,1);
-        
-        % Calculate noise SUM in the area around CUT
-        for p = i-(Tr+Gr) : i+(Tr+Gr)
-            for q = j-(Td+Gd) : j+(Td+Gd)
-                if (abs(i-p) > Gr || abs(j-q) > Gd)
-                    noise_level = noise_level + db2pow(RDM(p,q));
-                end
-            end
-        end
-        
-        % Calculate threshould from noise average then add the offset
-        threshold = pow2db(noise_level/(2*(Td+Gd+1)*2*(Tr+Gr+1)-(Gr*Gd)-1));
-        threshold = threshold + offset;
-        CUT = RDM(i,j);
-        
-        if (CUT > threshold)
-            RDM(i,j) = 1;
-            %fprintf ("p= %d, q= %d, CUT= %f, th= %f\n", p, q, CUT, th);
-        else
-            RDM(i,j) = 0;
-        end
-        
-    end
+% Initialize based on RDM - Only half of symmetry considered
+filtered_map = zeros(Nr/2, Nd);
+
+% Iterate through each row (Range)
+for i = (Tr+Gr+1) : (Nr/2 -Tr-Gr) 
+
+   % Iterate through each column (Doppler)
+   for j = (Td+Gd+1) : (Nd -Td-Gd)
+       
+       noise_level = 0;
+       num_training_cells = 0;
+       
+       % Iterate through each block within window
+       for r = (i-Tr-Gr) : (i+Tr+Gr)
+           for c = (j-Td-Gd) : (j+Td+Gd)
+               
+               % For all training cells ONLY
+               if (abs(i-r) > Gr || abs(c-j) > Gd)
+                   
+                   % keep running sum
+                   noise_level = noise_level + db2pow(RDM(r,c));
+                   num_training_cells = num_training_cells + 1;
+               end
+           end
+       end
+       
+       % Find average of running noise_level
+       avg_noise_level = offset * (noise_level / num_training_cells);
+       noise_threshold = pow2db(avg_noise_level);
+       
+       % Only keep signal above threshold...
+       signal_CUT = RDM(i,j);
+       if (signal_CUT > noise_threshold)
+           filtered_map(i,j) = 1;
+       end
+   end
 end
 
-% *%TODO* :
-% The process above will generate a thresholded block, which is smaller 
-%than the Range Doppler Map as the CUT cannot be located at the edges of
-%matrix. Hence,few cells will not be thresholded. To keep the map size same
-% set those values to 0.
-
-RDM(union(1:(Tr+Gr),end-(Tr+Gr-1):end),:) = 0;  % Rows
-RDM(:,union(1:(Td+Gd),end-(Td+Gd-1):end)) = 0;  % Columns
 
 % *%TODO* :
 %display the CFAR output using the Surf function like we did for Range
 %Doppler Response output.
-figure,surf(doppler_axis,range_axis,RDM);
-colorbar;
+
+% figure (3)
+subplot(1,2, 2)
+surf(doppler_axis,range_axis, filtered_map);
+title("Cell Averaging Constant Fast Alarm Rate Filtering (CFAR)");
+xlabel("Doppler Axis [m/s]");
+ylabel("Range Axis [m]");
+zlabel("Intensity (Normalized)");
+% colorbar;
