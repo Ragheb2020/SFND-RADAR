@@ -164,7 +164,7 @@ Gd = 4;
 
 % *%TODO* :
 % offset the threshold by SNR value in dB
-offset = 1.5;
+offset = 1.4;
 
 
 
